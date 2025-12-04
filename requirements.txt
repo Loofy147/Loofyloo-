@@ -1,0 +1,7 @@
+torch
+torchvision
+transformers
+librosa
+Pillow
+PyYAML
+tensorboard

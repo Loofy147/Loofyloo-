@@ -1,0 +1,18 @@
+
+# Python
+__pycache__/
+*.pyc
+
+# IDEs
+.idea/
+.vscode/
+
+# Data
+dummy_dataset/
+dummy_validation_dataset/
+
+# Checkpoints
+checkpoints/
+
+# Logs
+runs/

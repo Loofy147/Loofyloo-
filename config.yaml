@@ -1,0 +1,18 @@
+
+model:
+  embed_dim: 128
+  num_experts: 4
+  num_classes: 10
+  text_encoder: "bert-base-uncased"
+  image_encoder: "resnet50"
+  audio_encoder: "facebook/wav2vec2-base-960h"
+
+training:
+  batch_size: 1
+  num_epochs: 10
+  learning_rate: 0.001
+  clip_value: 1.0
+  scheduler_step_size: 1
+  scheduler_gamma: 0.9
+  data_dir: "dummy_dataset"
+  val_data_dir: "dummy_validation_dataset"
