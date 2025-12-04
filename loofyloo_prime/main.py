@@ -2,6 +2,7 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import yaml
 from .model import LoofylooPrime
 from .data import get_data_loader
 
@@ -13,18 +14,26 @@ def main():
     """
     The main function for training the LoofylooPrime model.
     """
-    vocab_size = 1000
-    embed_dim = 128
-    num_experts = 4
-    batch_size = 32
-    num_epochs = 10
+    with open("config.yaml", "r") as f:
+        config = yaml.safe_load(f)
 
-    model = LoofylooPrime(vocab_size, embed_dim, num_experts)
-    data_loader = get_data_loader(batch_size)
+    model_config = config["model"]
+    training_config = config["training"]
+
+    model = LoofylooPrime(
+        vocab_size=model_config["vocab_size"],
+        embed_dim=model_config["embed_dim"],
+        num_experts=model_config["num_experts"],
+    )
+    data_loader = get_data_loader(
+        data_dir=training_config["data_dir"],
+        batch_size=training_config["batch_size"],
+        embed_dim=model_config["embed_dim"],
+    )
     optimizer = optim.Adam(model.parameters())
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.MSELoss()
 
-    for epoch in range(num_epochs):
+    for epoch in range(training_config["num_epochs"]):
         for batch in data_loader:
             optimizer.zero_grad()
             output = model(
@@ -32,12 +41,11 @@ def main():
                 batch["image"],
                 batch["audio"],
             )
-            # You would need to create a target tensor here
-            # target = torch.randint(0, 2, (batch_size, 10, embed_dim))
-            # loss = criterion(output, target)
-            # loss.backward()
+            target = batch["target"]
+            loss = criterion(output, target)
+            loss.backward()
             optimizer.step()
-        print(f"Epoch {epoch + 1}/{num_epochs} completed.")
+        print(f"Epoch {epoch + 1}/{training_config['num_epochs']} completed.")
 
 if __name__ == "__main__":
     main()

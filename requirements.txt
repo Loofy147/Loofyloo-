@@ -1,3 +1,6 @@
 torch
 torchvision
 transformers
+librosa
+Pillow
+PyYAML
