@@ -1,0 +1,10 @@
+
+model:
+  vocab_size: 1000
+  embed_dim: 128
+  num_experts: 4
+
+training:
+  batch_size: 1
+  num_epochs: 10
+  data_dir: "dummy_dataset"
