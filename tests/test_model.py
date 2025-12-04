@@ -11,8 +11,8 @@ class TestModel(unittest.TestCase):
         embed_dim = 128
         foundation = MultimodalFoundation(vocab_size, embed_dim)
         text_input = torch.randint(0, vocab_size, (1, 10))
-        image_input = torch.randn(1, 2048)
-        audio_input = torch.randn(1, 1024)
+        image_input = torch.randn(1, 3, 224, 224)
+        audio_input = torch.randn(1, 16000)
         output = foundation(text_input, image_input, audio_input)
         self.assertEqual(output.shape, (1, 10, embed_dim))
 
@@ -39,8 +39,8 @@ class TestModel(unittest.TestCase):
         num_experts = 4
         model = LoofylooPrime(vocab_size, embed_dim, num_experts)
         text_input = torch.randint(0, vocab_size, (1, 10))
-        image_input = torch.randn(1, 2048)
-        audio_input = torch.randn(1, 1024)
+        image_input = torch.randn(1, 3, 224, 224)
+        audio_input = torch.randn(1, 16000)
         output = model(text_input, image_input, audio_input)
         self.assertEqual(output.shape, (1, 10, embed_dim))
 
