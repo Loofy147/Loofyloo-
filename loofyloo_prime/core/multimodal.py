@@ -2,7 +2,7 @@
 import torch
 import torch.nn as nn
 from torchvision.models import resnet50
-from transformers import Wav2Vec2Model
+from transformers import Wav2Vec2Model, BertModel
 
 # This is a skeleton implementation of a multimodal foundation.
 # To make this a truly multimodal model, you would need to add
@@ -11,45 +11,52 @@ from transformers import Wav2Vec2Model
 
 class TextEncoder(nn.Module):
     """
-    A simple text encoder that embeds text using an embedding layer.
+    A text encoder that uses a pre-trained BERT model.
     """
-    def __init__(self, vocab_size, embed_dim):
+    def __init__(self, model_name, embed_dim):
         """
         Initializes the TextEncoder.
 
         Args:
-            vocab_size (int): The size of the vocabulary.
+            model_name (str): The name of the pre-trained model to use.
             embed_dim (int): The dimension of the embedding.
         """
         super(TextEncoder, self).__init__()
-        self.embedding = nn.Embedding(vocab_size, embed_dim)
+        self.bert = BertModel.from_pretrained(model_name)
+        self.fc = nn.Linear(self.bert.config.hidden_size, embed_dim)
 
-    def forward(self, x):
+    def forward(self, input_ids, attention_mask):
         """
         Forward pass of the TextEncoder.
 
         Args:
-            x (torch.Tensor): The input tensor of shape (batch_size, seq_len).
+            input_ids (torch.Tensor): The input tensor of shape (batch_size, seq_len).
+            attention_mask (torch.Tensor): The attention mask of shape (batch_size, seq_len).
 
         Returns:
             torch.Tensor: The output tensor of shape (batch_size, seq_len, embed_dim).
         """
-        return self.embedding(x)
+        outputs = self.bert(input_ids=input_ids, attention_mask=attention_mask)
+        return self.fc(outputs.last_hidden_state)
 
 class ImageEncoder(nn.Module):
     """
     An image encoder that uses a pre-trained ResNet-50 model.
     """
-    def __init__(self, embed_dim):
+    def __init__(self, model_name, embed_dim):
         """
         Initializes the ImageEncoder.
 
         Args:
+            model_name (str): The name of the pre-trained model to use.
             embed_dim (int): The dimension of the embedding.
         """
         super(ImageEncoder, self).__init__()
-        self.resnet = resnet50(pretrained=True)
-        self.resnet.fc = nn.Linear(self.resnet.fc.in_features, embed_dim)
+        if model_name == "resnet50":
+            self.resnet = resnet50(weights='IMAGENET1K_V1')
+            self.resnet.fc = nn.Linear(self.resnet.fc.in_features, embed_dim)
+        else:
+            raise ValueError(f"Unsupported image encoder: {model_name}")
 
     def forward(self, x):
         """
@@ -67,15 +74,16 @@ class AudioEncoder(nn.Module):
     """
     An audio encoder that uses a pre-trained Wav2Vec2 model.
     """
-    def __init__(self, embed_dim):
+    def __init__(self, model_name, embed_dim):
         """
         Initializes the AudioEncoder.
 
         Args:
+            model_name (str): The name of the pre-trained model to use.
             embed_dim (int): The dimension of the embedding.
         """
         super(AudioEncoder, self).__init__()
-        self.wav2vec2 = Wav2Vec2Model.from_pretrained("facebook/wav2vec2-base-960h")
+        self.wav2vec2 = Wav2Vec2Model.from_pretrained(model_name)
         self.fc = nn.Linear(self.wav2vec2.config.hidden_size, embed_dim)
 
     def forward(self, x):
@@ -130,33 +138,36 @@ class MultimodalFoundation(nn.Module):
     """
     A multimodal foundation that combines text, image, and audio features.
     """
-    def __init__(self, vocab_size, embed_dim):
+    def __init__(self, text_encoder_name, image_encoder_name, audio_encoder_name, embed_dim):
         """
         Initializes the MultimodalFoundation.
 
         Args:
-            vocab_size (int): The size of the vocabulary.
+            text_encoder_name (str): The name of the pre-trained text encoder to use.
+            image_encoder_name (str): The name of the pre-trained image encoder to use.
+            audio_encoder_name (str): The name of the pre-trained audio encoder to use.
             embed_dim (int): The dimension of the embedding.
         """
         super(MultimodalFoundation, self).__init__()
-        self.text_encoder = TextEncoder(vocab_size, embed_dim)
-        self.image_encoder = ImageEncoder(embed_dim)
-        self.audio_encoder = AudioEncoder(embed_dim)
+        self.text_encoder = TextEncoder(text_encoder_name, embed_dim)
+        self.image_encoder = ImageEncoder(image_encoder_name, embed_dim)
+        self.audio_encoder = AudioEncoder(audio_encoder_name, embed_dim)
         self.cross_attention = CrossAttention(embed_dim)
 
-    def forward(self, text_input, image_input, audio_input):
+    def forward(self, text_input, attention_mask, image_input, audio_input):
         """
         Forward pass of the MultimodalFoundation.
 
         Args:
             text_input (torch.Tensor): The text input tensor of shape (batch_size, seq_len).
+            attention_mask (torch.Tensor): The attention mask of shape (batch_size, seq_len).
             image_input (torch.Tensor): The image input tensor of shape (batch_size, 3, 224, 224).
             audio_input (torch.Tensor): The audio input tensor of shape (batch_size, seq_len).
 
         Returns:
             torch.Tensor: The fused output tensor of shape (batch_size, seq_len, embed_dim).
         """
-        text_features = self.text_encoder(text_input)
+        text_features = self.text_encoder(text_input, attention_mask)
         image_features = self.image_encoder(image_input).unsqueeze(1)
         audio_features = self.audio_encoder(audio_input).unsqueeze(1)
 

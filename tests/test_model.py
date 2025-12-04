@@ -7,13 +7,18 @@ from loofyloo_prime.core.moe import MoELayer
 
 class TestModel(unittest.TestCase):
     def test_multimodal_foundation(self):
-        vocab_size = 1000
         embed_dim = 128
-        foundation = MultimodalFoundation(vocab_size, embed_dim)
-        text_input = torch.randint(0, vocab_size, (1, 10))
+        foundation = MultimodalFoundation(
+            text_encoder_name="bert-base-uncased",
+            image_encoder_name="resnet50",
+            audio_encoder_name="facebook/wav2vec2-base-960h",
+            embed_dim=embed_dim,
+        )
+        text_input = torch.randint(0, 1000, (1, 10))
+        attention_mask = torch.ones(1, 10)
         image_input = torch.randn(1, 3, 224, 224)
         audio_input = torch.randn(1, 16000)
-        output = foundation(text_input, image_input, audio_input)
+        output = foundation(text_input, attention_mask, image_input, audio_input)
         self.assertEqual(output.shape, (1, 10, embed_dim))
 
     def test_cross_attention(self):
@@ -34,14 +39,20 @@ class TestModel(unittest.TestCase):
         self.assertEqual(output.shape, (1, 10, output_dim))
 
     def test_loofyloo_prime(self):
-        vocab_size = 1000
         embed_dim = 128
         num_experts = 4
-        model = LoofylooPrime(vocab_size, embed_dim, num_experts)
-        text_input = torch.randint(0, vocab_size, (1, 10))
+        model = LoofylooPrime(
+            text_encoder_name="bert-base-uncased",
+            image_encoder_name="resnet50",
+            audio_encoder_name="facebook/wav2vec2-base-960h",
+            embed_dim=embed_dim,
+            num_experts=num_experts,
+        )
+        text_input = torch.randint(0, 1000, (1, 10))
+        attention_mask = torch.ones(1, 10)
         image_input = torch.randn(1, 3, 224, 224)
         audio_input = torch.randn(1, 16000)
-        output = model(text_input, image_input, audio_input)
+        output = model(text_input, attention_mask, image_input, audio_input)
         self.assertEqual(output.shape, (1, 10, embed_dim))
 
 if __name__ == '__main__':

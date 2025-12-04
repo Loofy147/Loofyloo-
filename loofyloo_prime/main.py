@@ -21,23 +21,33 @@ def main():
     training_config = config["training"]
 
     model = LoofylooPrime(
-        vocab_size=model_config["vocab_size"],
+        text_encoder_name=model_config["text_encoder"],
+        image_encoder_name=model_config["image_encoder"],
+        audio_encoder_name=model_config["audio_encoder"],
         embed_dim=model_config["embed_dim"],
         num_experts=model_config["num_experts"],
     )
-    data_loader = get_data_loader(
+    train_loader = get_data_loader(
         data_dir=training_config["data_dir"],
         batch_size=training_config["batch_size"],
         embed_dim=model_config["embed_dim"],
     )
-    optimizer = optim.Adam(model.parameters())
+    val_loader = get_data_loader(
+        data_dir=training_config["val_data_dir"],
+        batch_size=training_config["batch_size"],
+        embed_dim=model_config["embed_dim"],
+    )
+    optimizer = optim.Adam(model.parameters(), lr=training_config["learning_rate"])
     criterion = nn.MSELoss()
 
     for epoch in range(training_config["num_epochs"]):
-        for batch in data_loader:
+        # Training loop
+        model.train()
+        for batch in train_loader:
             optimizer.zero_grad()
             output = model(
                 batch["text"],
+                batch["attention_mask"],
                 batch["image"],
                 batch["audio"],
             )
@@ -45,7 +55,22 @@ def main():
             loss = criterion(output, target)
             loss.backward()
             optimizer.step()
-        print(f"Epoch {epoch + 1}/{training_config['num_epochs']} completed.")
+        print(f"Epoch {epoch + 1}/{training_config['num_epochs']} training completed.")
+
+        # Validation loop
+        model.eval()
+        with torch.no_grad():
+            for batch in val_loader:
+                output = model(
+                    batch["text"],
+                    batch["attention_mask"],
+                    batch["image"],
+                    batch["audio"],
+                )
+                target = batch["target"]
+                loss = criterion(output, target)
+        print(f"Epoch {epoch + 1}/{training_config['num_epochs']} validation completed.")
+
 
 if __name__ == "__main__":
     main()

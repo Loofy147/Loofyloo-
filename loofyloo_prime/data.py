@@ -22,6 +22,7 @@ class MultimodalDataset(Dataset):
 
         Args:
             data_dir (str): The directory containing the data.
+            embed_dim (int): The dimension of the embedding.
         """
         self.data_dir = data_dir
         self.embed_dim = embed_dim
@@ -47,7 +48,9 @@ class MultimodalDataset(Dataset):
         text_path = os.path.join(self.data_dir, "text", self.text_files[idx])
         with open(text_path, "r") as f:
             text = f.read()
-        text = self.tokenizer(text, return_tensors="pt", padding="max_length", max_length=128)["input_ids"].squeeze(0)
+        tokenized_text = self.tokenizer(text, return_tensors="pt", padding="max_length", max_length=128)
+        text_input = tokenized_text["input_ids"].squeeze(0)
+        attention_mask = tokenized_text["attention_mask"].squeeze(0)
 
         image_path = os.path.join(self.data_dir, "image", self.image_files[idx])
         image = Image.open(image_path).convert("RGB")
@@ -58,7 +61,8 @@ class MultimodalDataset(Dataset):
         audio = torch.tensor(audio).float()
 
         return {
-            "text": text,
+            "text": text_input,
+            "attention_mask": attention_mask,
             "image": image,
             "audio": audio,
             "target": torch.randn(128, self.embed_dim),
@@ -80,6 +84,7 @@ def get_data_loader(data_dir, batch_size, embed_dim):
     Args:
         data_dir (str): The directory containing the data.
         batch_size (int): The batch size.
+        embed_dim (int): The dimension of the embedding.
 
     Returns:
         DataLoader: A DataLoader for the MultimodalDataset.
