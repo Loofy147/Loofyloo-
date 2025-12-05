@@ -4,3 +4,4 @@ transformers
 librosa
 Pillow
 PyYAML
+tensorboard

@@ -4,8 +4,11 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import yaml
+import argparse
 from .model import LoofylooPrime
 from .data import get_data_loader
+from torch.optim.lr_scheduler import StepLR
+from torch.utils.tensorboard import SummaryWriter
 
 # This is a skeleton implementation of a training loop.
 # To make this a functional training loop, you would need to
@@ -15,11 +18,17 @@ def main():
     """
     The main function for training the LoofylooPrime model.
     """
-    with open("config.yaml", "r") as f:
+    parser = argparse.ArgumentParser(description="Train Loofyloo-Prime model.")
+    parser.add_argument("--config", type=str, default="config.yaml", help="Path to the configuration file.")
+    args = parser.parse_args()
+
+    with open(args.config, "r") as f:
         config = yaml.safe_load(f)
 
     model_config = config["model"]
     training_config = config["training"]
+
+    writer = SummaryWriter()
 
     model = LoofylooPrime(
         text_encoder_name=model_config["text_encoder"],
@@ -40,6 +49,7 @@ def main():
         num_classes=model_config["num_classes"],
     )
     optimizer = optim.Adam(model.parameters(), lr=training_config["learning_rate"])
+    scheduler = StepLR(optimizer, step_size=training_config["scheduler_step_size"], gamma=training_config["scheduler_gamma"])
     criterion = nn.CrossEntropyLoss()
 
     best_val_loss = float("inf")
@@ -48,6 +58,8 @@ def main():
         # Training loop
         model.train()
         train_loss = 0.0
+        correct = 0
+        total = 0
         for batch in train_loader:
             optimizer.zero_grad()
             output = model(
@@ -59,13 +71,24 @@ def main():
             target = batch["label"]
             loss = criterion(output, target)
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), training_config["clip_value"])
             optimizer.step()
             train_loss += loss.item()
-        print(f"Epoch {epoch + 1}/{training_config['num_epochs']}, Training Loss: {train_loss / len(train_loader):.4f}")
+            _, predicted = torch.max(output.data, 1)
+            total += target.size(0)
+            correct += (predicted == target).sum().item()
+
+        train_loss /= len(train_loader)
+        train_accuracy = 100 * correct / total
+        writer.add_scalar("Loss/train", train_loss, epoch)
+        writer.add_scalar("Accuracy/train", train_accuracy, epoch)
+        print(f"Epoch {epoch + 1}/{training_config['num_epochs']}, Training Loss: {train_loss:.4f}, Training Accuracy: {train_accuracy:.2f}%")
 
         # Validation loop
         model.eval()
         val_loss = 0.0
+        correct = 0
+        total = 0
         with torch.no_grad():
             for batch in val_loader:
                 output = model(
@@ -77,13 +100,23 @@ def main():
                 target = batch["label"]
                 loss = criterion(output, target)
                 val_loss += loss.item()
+                _, predicted = torch.max(output.data, 1)
+                total += target.size(0)
+                correct += (predicted == target).sum().item()
 
         val_loss /= len(val_loader)
-        print(f"Epoch {epoch + 1}/{training_config['num_epochs']}, Validation Loss: {val_loss:.4f}")
+        val_accuracy = 100 * correct / total
+        writer.add_scalar("Loss/val", val_loss, epoch)
+        writer.add_scalar("Accuracy/val", val_accuracy, epoch)
+        print(f"Epoch {epoch + 1}/{training_config['num_epochs']}, Validation Loss: {val_loss:.4f}, Validation Accuracy: {val_accuracy:.2f}%")
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             torch.save(model.state_dict(), "checkpoints/best_model.pt")
+
+        scheduler.step()
+
+    writer.close()
 
 
 if __name__ == "__main__":

@@ -13,3 +13,6 @@ dummy_validation_dataset/
 
 # Checkpoints
 checkpoints/
+
+# Logs
+runs/
