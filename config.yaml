@@ -2,6 +2,7 @@
 model:
   embed_dim: 128
   num_experts: 4
+  num_classes: 10
   text_encoder: "bert-base-uncased"
   image_encoder: "resnet50"
   audio_encoder: "facebook/wav2vec2-base-960h"

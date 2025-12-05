@@ -16,16 +16,16 @@ class MultimodalDataset(Dataset):
     """
     A multimodal dataset that loads text, image, and audio files.
     """
-    def __init__(self, data_dir, embed_dim):
+    def __init__(self, data_dir, num_classes):
         """
         Initializes the MultimodalDataset.
 
         Args:
             data_dir (str): The directory containing the data.
-            embed_dim (int): The dimension of the embedding.
+            num_classes (int): The number of classes for classification.
         """
         self.data_dir = data_dir
-        self.embed_dim = embed_dim
+        self.num_classes = num_classes
         self.text_files = os.listdir(os.path.join(data_dir, "text"))
         self.image_files = os.listdir(os.path.join(data_dir, "image"))
         self.audio_files = os.listdir(os.path.join(data_dir, "audio"))
@@ -65,7 +65,7 @@ class MultimodalDataset(Dataset):
             "attention_mask": attention_mask,
             "image": image,
             "audio": audio,
-            "target": torch.randn(128, self.embed_dim),
+            "label": torch.randint(0, self.num_classes, (1,)).squeeze(0),
         }
 
     def __len__(self):
@@ -77,17 +77,17 @@ class MultimodalDataset(Dataset):
         """
         return len(self.text_files)
 
-def get_data_loader(data_dir, batch_size, embed_dim):
+def get_data_loader(data_dir, batch_size, num_classes):
     """
     Returns a DataLoader for the MultimodalDataset.
 
     Args:
         data_dir (str): The directory containing the data.
         batch_size (int): The batch size.
-        embed_dim (int): The dimension of the embedding.
+        num_classes (int): The number of classes for classification.
 
     Returns:
         DataLoader: A DataLoader for the MultimodalDataset.
     """
-    dataset = MultimodalDataset(data_dir, embed_dim)
+    dataset = MultimodalDataset(data_dir, num_classes)
     return DataLoader(dataset, batch_size=batch_size)

@@ -10,3 +10,6 @@ __pycache__/
 # Data
 dummy_dataset/
 dummy_validation_dataset/
+
+# Checkpoints
+checkpoints/
